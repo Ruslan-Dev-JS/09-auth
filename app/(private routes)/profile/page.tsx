@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import css from "./peofile.module.css";
+import css from "./ProfilePage.module.css";
 
 export const metadata: Metadata = {
   title: "Profile | NoteHub",
