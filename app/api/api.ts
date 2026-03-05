@@ -1,2 +1,4 @@
-export * from "../../api/api";
+import { api } from "@/lib/api/api";
+
+export { api };
 

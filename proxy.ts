@@ -11,19 +11,20 @@ const apiProxy = createProxyMiddleware({
   cookieDomainRewrite: {
     "notehub-api.goit.study": "",
   },
-  onProxyReq(proxyReq, req) {
+  // Typed as any to avoid strict type mismatch with http-proxy-middleware Options
+  onProxyReq(proxyReq: any, req: any) {
     const cookie = (req as IncomingMessage).headers.cookie;
     if (cookie) {
       proxyReq.setHeader("cookie", cookie);
     }
   },
-  onProxyRes(proxyRes, req, res) {
+  onProxyRes(proxyRes: any, req: any, res: any) {
     const setCookieHeader = proxyRes.headers["set-cookie"];
     if (setCookieHeader) {
       (res as ServerResponse).setHeader("set-cookie", setCookieHeader);
     }
   },
-});
+} as any);
 
 export function proxy(req: NextApiRequest, res: NextApiResponse) {
   return new Promise<void>((resolve, reject) => {
