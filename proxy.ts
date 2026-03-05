@@ -22,14 +22,40 @@ export async function proxy(req: NextRequest) {
   }
 
   const cookieHeader = req.headers.get("cookie") ?? undefined;
+  const accessToken = req.cookies.get("accessToken")?.value;
+  const refreshToken = req.cookies.get("refreshToken")?.value;
 
   let isAuthenticated = false;
+  let refreshedCookies: string[] | undefined;
 
-  try {
-    const response = await checkSession(cookieHeader);
-    isAuthenticated = !!response.data;
-  } catch {
-    isAuthenticated = false;
+  // Якщо є accessToken — вважаємо користувача авторизованим
+  if (accessToken) {
+    isAuthenticated = true;
+  } else if (refreshToken) {
+    // Якщо accessToken немає, але є refreshToken — пробуємо оновити сесію
+    try {
+      const response = await checkSession(cookieHeader);
+
+      const data: unknown = response.data;
+      if (data && typeof data === "object" && "success" in data) {
+        // Очікуємо форму { success: boolean }
+        isAuthenticated = Boolean(
+          (data as { success?: boolean | null }).success,
+        );
+      } else {
+        // Фолбек, якщо бекенд повертає інший формат
+        isAuthenticated = Boolean(data);
+      }
+
+      const setCookieHeader = response.headers["set-cookie"];
+      if (setCookieHeader) {
+        refreshedCookies = Array.isArray(setCookieHeader)
+          ? setCookieHeader
+          : [setCookieHeader];
+      }
+    } catch {
+      isAuthenticated = false;
+    }
   }
 
   // Якщо неавторизований користувач відкриває приватний маршрут → редірект на /sign-in
@@ -38,10 +64,27 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Якщо авторизований користувач відкриває публічний маршрут → редірект на /profile
+  // Якщо авторизований користувач відкриває публічний маршрут → редірект на /
   if (isPublicAuthPath(pathname) && isAuthenticated) {
-    const url = new URL("/profile", req.url);
-    return NextResponse.redirect(url);
+    const url = new URL("/", req.url);
+    const res = NextResponse.redirect(url);
+
+    if (refreshedCookies) {
+      for (const cookie of refreshedCookies) {
+        res.headers.append("Set-Cookie", cookie);
+      }
+    }
+
+    return res;
+  }
+
+  // Якщо ми оновили токени, але не робили редірект — додаємо Set-Cookie до звичайної відповіді
+  if (refreshedCookies && isAuthenticated) {
+    const res = NextResponse.next();
+    for (const cookie of refreshedCookies) {
+      res.headers.append("Set-Cookie", cookie);
+    }
+    return res;
   }
 
   // Інакше нічого не робимо (запит проходить далі)
