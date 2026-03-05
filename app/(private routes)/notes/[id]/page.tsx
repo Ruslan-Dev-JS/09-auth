@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import {
   QueryClient,
   dehydrate,
   HydrationBoundary,
 } from "@tanstack/react-query";
 
-import { fetchNoteById } from "@/lib/api";
-import NoteDetailsClient from "../../../notes/[id]/NoteDetails.client";
+import { fetchNoteById } from "@/lib/api/serverApi";
+import NoteDetailsClient from "./NoteDetails.client";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   let note: Awaited<ReturnType<typeof fetchNoteById>>;
   try {
-    note = await fetchNoteById(id);
+    note = await fetchNoteById(undefined, id);
   } catch {
     return { title: "Note | NoteHub" };
   }
@@ -39,10 +40,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function NoteDetailsPage({ params }: Props) {
   const { id } = await params;
   const queryClient = new QueryClient();
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.toString();
 
   await queryClient.prefetchQuery({
     queryKey: ["note", id],
-    queryFn: () => fetchNoteById(id),
+    queryFn: () => fetchNoteById(cookieHeader, id),
   });
 
   return (
