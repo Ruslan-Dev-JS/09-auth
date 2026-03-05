@@ -1,8 +1,6 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
-import css from "../Sidebar.module.css";
+import css from "../../../../notes/filter/Sidebar.module.css";
 
 const TAGS = ["Todo", "Work", "Personal", "Meeting", "Shopping"];
 

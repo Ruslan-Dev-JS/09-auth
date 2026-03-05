@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 
 import { fetchNoteById } from "@/lib/api";
-import NoteDetailsClient from "./NoteDetails.client";
+import NoteDetailsClient from "../../../notes/[id]/NoteDetails.client";
 
 export const dynamic = "force-dynamic";
 
@@ -51,3 +51,4 @@ export default async function NoteDetailsPage({ params }: Props) {
     </HydrationBoundary>
   );
 }
+

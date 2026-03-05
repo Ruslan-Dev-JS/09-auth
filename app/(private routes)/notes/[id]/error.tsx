@@ -7,8 +7,9 @@ export default function Error({
 }) {
   return (
     <p>
-      Could not fetch the list of notes.
+      Could not fetch note details.
       {error.message}
     </p>
   );
 }
+

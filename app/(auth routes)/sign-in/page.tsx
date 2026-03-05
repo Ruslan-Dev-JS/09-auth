@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import css from "./SignInPage.module.css";
+import { login } from "@/lib/api/clientApi";
+import { useAuthStore } from "@/lib/store/authStore";
 
 export default function SignInPage() {
   const router = useRouter();
+  const { setUser } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -19,15 +22,11 @@ export default function SignInPage() {
     const password = formData.get("password") as string;
 
     try {
-      // TODO: replace with real API call from lib/api/clientApi
-      await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
+      const user = await login({ email, password });
+      setUser(user);
       router.push("/profile");
-    } catch {
+    } catch (err) {
+      console.error(err);
       setError("Login failed. Please try again.");
     } finally {
       setIsSubmitting(false);

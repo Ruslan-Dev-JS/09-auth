@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import css from "./SignUpPage.module.css";
+import { register } from "@/lib/api/clientApi";
+import { useAuthStore } from "@/lib/store/authStore";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { setUser } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -19,15 +22,11 @@ export default function SignUpPage() {
     const password = formData.get("password") as string;
 
     try {
-      // TODO: replace with real API call from lib/api/clientApi
-      await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
+      const user = await register({ email, password });
+      setUser(user);
       router.push("/profile");
-    } catch {
+    } catch (err) {
+      console.error(err);
       setError("Registration failed. Please try again.");
     } finally {
       setIsSubmitting(false);
