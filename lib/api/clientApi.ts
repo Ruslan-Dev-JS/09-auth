@@ -1,3 +1,4 @@
+import axios from "axios";
 import type { Note } from "@/types/note";
 import type { FetchNotesResponse } from "@/types/api";
 import type { User } from "@/types/user";
@@ -53,8 +54,23 @@ export async function logout(): Promise<void> {
 }
 
 export async function checkSession(): Promise<User | null> {
-  const { data } = await api.get<User | null>("/auth/session");
-  return data;
+  try {
+    const { data } = await api.get<User | null>("/auth/session");
+    return data;
+  } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      error.response &&
+      (error.response.status === 400 ||
+        error.response.status === 401 ||
+        error.response.status === 403)
+    ) {
+      // Not authenticated – treat as anonymous session
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export async function getMe(): Promise<User> {
