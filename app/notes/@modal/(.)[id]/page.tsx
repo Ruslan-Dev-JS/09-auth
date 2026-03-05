@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { cookies } from "next/headers";
 import { fetchNoteById } from "@/lib/api/serverApi";
-import NotePreview from "../../[id]/NotePreview.client";
+import NotePreview from "@/app/@modal/(.)notes/[id]/NotePreview.client";
 
 export const dynamic = "force-dynamic";
 
