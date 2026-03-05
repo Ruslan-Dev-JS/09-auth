@@ -6,9 +6,11 @@ import Image from "next/image";
 import css from "../EditProfilePage.module.css";
 import { getMe, updateMe } from "@/lib/api/clientApi";
 import type { User } from "@/types/user";
+import { useAuthStore } from "@/lib/store/authStore";
 
 export default function EditProfilePage() {
   const router = useRouter();
+  const { setUser: setAuthUser } = useAuthStore();
   const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,7 +47,9 @@ export default function EditProfilePage() {
     setError(null);
 
     try {
-      await updateMe({ username });
+      const updatedUser = await updateMe({ username });
+      setUser(updatedUser);
+      setAuthUser(updatedUser);
       router.push("/profile");
     } catch (err) {
       console.error(err);

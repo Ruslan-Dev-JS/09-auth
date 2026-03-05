@@ -1,37 +1,48 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import axios from "axios";
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { parse } from "cookie";
+import { isAxiosError } from "axios";
+import { api } from "../../api";
+import { logErrorResponse } from "../../_utils/utils";
 
-const BASE_URL = "https://notehub-api.goit.study";
-
-export async function POST(request: NextRequest) {
-  const body = (await request.json()) as { email: string; password: string };
-
+export async function POST(req: NextRequest) {
   try {
-    const backendResponse = await axios.post(`${BASE_URL}/auth/login`, body, {
-      withCredentials: true,
-      headers: {
-        Cookie: request.headers.get("cookie") ?? "",
-        "Content-Type": "application/json",
-      },
-      validateStatus: () => true,
-    });
+    const body = await req.json();
+    const apiRes = await api.post("auth/login", body);
 
-    const res = NextResponse.json(backendResponse.data, {
-      status: backendResponse.status,
-    });
+    const cookieStore = await cookies();
+    const setCookie = apiRes.headers["set-cookie"];
 
-    const setCookie = backendResponse.headers["set-cookie"];
-    if (Array.isArray(setCookie)) {
-      setCookie.forEach((cookie) => res.headers.append("set-cookie", cookie));
-    } else if (typeof setCookie === "string") {
-      res.headers.set("set-cookie", setCookie);
+    if (setCookie) {
+      const cookieArray = Array.isArray(setCookie) ? setCookie : [setCookie];
+      for (const cookieStr of cookieArray) {
+        const parsed = parse(cookieStr);
+        const options = {
+          expires: parsed.Expires ? new Date(parsed.Expires) : undefined,
+          path: parsed.Path,
+          maxAge: Number(parsed["Max-Age"]),
+        };
+        if (parsed.accessToken)
+          cookieStore.set("accessToken", parsed.accessToken, options);
+        if (parsed.refreshToken)
+          cookieStore.set("refreshToken", parsed.refreshToken, options);
+      }
+
+      return NextResponse.json(apiRes.data, { status: apiRes.status });
     }
 
-    return res;
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   } catch (error) {
+    if (isAxiosError(error)) {
+      logErrorResponse(error.response?.data);
+      return NextResponse.json(
+        { error: error.message, response: error.response?.data },
+        { status: error.status },
+      );
+    }
+    logErrorResponse({ message: (error as Error).message });
     return NextResponse.json(
-      { message: "Login failed" },
+      { error: "Internal Server Error" },
       { status: 500 },
     );
   }

@@ -1,67 +1,59 @@
-import type { NextRequest } from "next/server";
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-import axios from "axios";
+import { api } from "../../api";
+import { cookies } from "next/headers";
+import { logErrorResponse } from "../../_utils/utils";
+import { isAxiosError } from "axios";
 
-const BASE_URL = "https://notehub-api.goit.study";
-
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const backendResponse = await axios.get(`${BASE_URL}/users/me`, {
-      withCredentials: true,
+    const cookieStore = await cookies();
+
+    const res = await api.get("/users/me", {
       headers: {
-        Cookie: request.headers.get("cookie") ?? "",
+        Cookie: cookieStore.toString(),
       },
-      validateStatus: () => true,
     });
-
-    const res = NextResponse.json(backendResponse.data, {
-      status: backendResponse.status,
-    });
-
-    const setCookie = backendResponse.headers["set-cookie"];
-    if (Array.isArray(setCookie)) {
-      setCookie.forEach((cookie) => res.headers.append("set-cookie", cookie));
-    } else if (typeof setCookie === "string") {
-      res.headers.set("set-cookie", setCookie);
+    return NextResponse.json(res.data, { status: res.status });
+  } catch (error) {
+    if (isAxiosError(error)) {
+      logErrorResponse(error.response?.data);
+      return NextResponse.json(
+        { error: error.message, response: error.response?.data },
+        { status: error.status },
+      );
     }
-
-    return res;
-  } catch {
+    logErrorResponse({ message: (error as Error).message });
     return NextResponse.json(
-      { message: "Failed to fetch user" },
+      { error: "Internal Server Error" },
       { status: 500 },
     );
   }
 }
 
-export async function PATCH(request: NextRequest) {
-  const body = await request.json();
-
+export async function PATCH(request: Request) {
   try {
-    const backendResponse = await axios.patch(`${BASE_URL}/users/me`, body, {
-      withCredentials: true,
+    const cookieStore = await cookies();
+    const body = await request.json();
+
+    const res = await api.patch("/users/me", body, {
       headers: {
-        Cookie: request.headers.get("cookie") ?? "",
-        "Content-Type": "application/json",
+        Cookie: cookieStore.toString(),
       },
-      validateStatus: () => true,
     });
-
-    const res = NextResponse.json(backendResponse.data, {
-      status: backendResponse.status,
-    });
-
-    const setCookie = backendResponse.headers["set-cookie"];
-    if (Array.isArray(setCookie)) {
-      setCookie.forEach((cookie) => res.headers.append("set-cookie", cookie));
-    } else if (typeof setCookie === "string") {
-      res.headers.set("set-cookie", setCookie);
+    return NextResponse.json(res.data, { status: res.status });
+  } catch (error) {
+    if (isAxiosError(error)) {
+      logErrorResponse(error.response?.data);
+      return NextResponse.json(
+        { error: error.message, response: error.response?.data },
+        { status: error.status },
+      );
     }
-
-    return res;
-  } catch {
+    logErrorResponse({ message: (error as Error).message });
     return NextResponse.json(
-      { message: "Failed to update user" },
+      { error: "Internal Server Error" },
       { status: 500 },
     );
   }

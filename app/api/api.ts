@@ -1,4 +1,8 @@
-import { api } from "@/lib/api/api";
+import axios from "axios";
 
-export { api };
+export const api = axios.create({
+  baseURL: "https://notehub-api.goit.study",
+  withCredentials: true,
+});
+
 

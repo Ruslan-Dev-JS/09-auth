@@ -1,42 +1,56 @@
-import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import axios from "axios";
+import { cookies } from "next/headers";
+import { api } from "../../api";
+import { parse } from "cookie";
+import { isAxiosError } from "axios";
+import { logErrorResponse } from "../../_utils/utils";
 
-const BASE_URL = "https://notehub-api.goit.study";
-
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const backendResponse = await axios.get(`${BASE_URL}/auth/session`, {
-      withCredentials: true,
-      headers: {
-        Cookie: request.headers.get("cookie") ?? "",
-      },
-      validateStatus: () => true,
-    });
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get("accessToken")?.value;
+    const refreshToken = cookieStore.get("refreshToken")?.value;
 
-    // Якщо бекенд повертає 200 без тіла, просто віддаємо null
-    const data =
-      backendResponse.data && Object.keys(backendResponse.data).length > 0
-        ? backendResponse.data
-        : null;
-
-    const res = NextResponse.json(data, {
-      status: backendResponse.status,
-    });
-
-    const setCookie = backendResponse.headers["set-cookie"];
-    if (Array.isArray(setCookie)) {
-      setCookie.forEach((cookie) => res.headers.append("set-cookie", cookie));
-    } else if (typeof setCookie === "string") {
-      res.headers.set("set-cookie", setCookie);
+    if (accessToken) {
+      return NextResponse.json({ success: true });
     }
 
-    return res;
-  } catch {
-    return NextResponse.json(
-      { message: "Session check failed" },
-      { status: 500 },
-    );
+    if (refreshToken) {
+      const apiRes = await api.get("auth/session", {
+        headers: {
+          Cookie: cookieStore.toString(),
+        },
+      });
+
+      const setCookie = apiRes.headers["set-cookie"];
+
+      if (setCookie) {
+        const cookieArray = Array.isArray(setCookie) ? setCookie : [setCookie];
+        for (const cookieStr of cookieArray) {
+          const parsed = parse(cookieStr);
+
+          const options = {
+            expires: parsed.Expires ? new Date(parsed.Expires) : undefined,
+            path: parsed.Path,
+            maxAge: Number(parsed["Max-Age"]),
+          };
+
+          if (parsed.accessToken)
+            cookieStore.set("accessToken", parsed.accessToken, options);
+          if (parsed.refreshToken)
+            cookieStore.set("refreshToken", parsed.refreshToken, options);
+        }
+        return NextResponse.json({ success: true }, { status: 200 });
+      }
+    }
+    return NextResponse.json({ success: false }, { status: 200 });
+  } catch (error) {
+    if (isAxiosError(error)) {
+      logErrorResponse(error.response?.data);
+      return NextResponse.json({ success: false }, { status: 200 });
+    }
+    logErrorResponse({ message: (error as Error).message });
+    return NextResponse.json({ success: false }, { status: 200 });
   }
 }
 

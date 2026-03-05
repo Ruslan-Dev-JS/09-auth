@@ -1,75 +1,71 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import axios from "axios";
-
-const BASE_URL = "https://notehub-api.goit.study";
+import { NextRequest, NextResponse } from "next/server";
+import { api } from "../api";
+import { cookies } from "next/headers";
+import { isAxiosError } from "axios";
+import { logErrorResponse } from "../_utils/utils";
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const params: Record<string, string> = {};
-
-  for (const [key, value] of searchParams.entries()) {
-    params[key] = value;
-  }
-
   try {
-    const backendResponse = await axios.get(`${BASE_URL}/notes`, {
-      params,
-      withCredentials: true,
-      headers: {
-        Cookie: request.headers.get("cookie") ?? "",
+    const cookieStore = await cookies();
+    const search = request.nextUrl.searchParams.get("search") ?? "";
+    const page = Number(request.nextUrl.searchParams.get("page") ?? 1);
+    const rawTag = request.nextUrl.searchParams.get("tag") ?? "";
+    const tag = rawTag === "All" ? "" : rawTag;
+
+    const res = await api("/notes", {
+      params: {
+        ...(search !== "" && { search }),
+        page,
+        perPage: 12,
+        ...(tag && { tag }),
       },
-      validateStatus: () => true,
+      headers: {
+        Cookie: cookieStore.toString(),
+      },
     });
 
-    const res = NextResponse.json(backendResponse.data, {
-      status: backendResponse.status,
-    });
-
-    const setCookie = backendResponse.headers["set-cookie"];
-    if (Array.isArray(setCookie)) {
-      setCookie.forEach((cookie) => res.headers.append("set-cookie", cookie));
-    } else if (typeof setCookie === "string") {
-      res.headers.set("set-cookie", setCookie);
+    return NextResponse.json(res.data, { status: res.status });
+  } catch (error) {
+    if (isAxiosError(error)) {
+      logErrorResponse(error.response?.data);
+      return NextResponse.json(
+        { error: error.message, response: error.response?.data },
+        { status: error.status },
+      );
     }
-
-    return res;
-  } catch {
+    logErrorResponse({ message: (error as Error).message });
     return NextResponse.json(
-      { message: "Failed to fetch notes" },
+      { error: "Internal Server Error" },
       { status: 500 },
     );
   }
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-
   try {
-    const backendResponse = await axios.post(`${BASE_URL}/notes`, body, {
-      withCredentials: true,
+    const cookieStore = await cookies();
+
+    const body = await request.json();
+
+    const res = await api.post("/notes", body, {
       headers: {
-        Cookie: request.headers.get("cookie") ?? "",
+        Cookie: cookieStore.toString(),
         "Content-Type": "application/json",
       },
-      validateStatus: () => true,
     });
 
-    const res = NextResponse.json(backendResponse.data, {
-      status: backendResponse.status,
-    });
-
-    const setCookie = backendResponse.headers["set-cookie"];
-    if (Array.isArray(setCookie)) {
-      setCookie.forEach((cookie) => res.headers.append("set-cookie", cookie));
-    } else if (typeof setCookie === "string") {
-      res.headers.set("set-cookie", setCookie);
+    return NextResponse.json(res.data, { status: res.status });
+  } catch (error) {
+    if (isAxiosError(error)) {
+      logErrorResponse(error.response?.data);
+      return NextResponse.json(
+        { error: error.message, response: error.response?.data },
+        { status: error.status },
+      );
     }
-
-    return res;
-  } catch {
+    logErrorResponse({ message: (error as Error).message });
     return NextResponse.json(
-      { message: "Failed to create note" },
+      { error: "Internal Server Error" },
       { status: 500 },
     );
   }

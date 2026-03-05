@@ -1,38 +1,44 @@
-import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import axios from "axios";
+import { api } from "../../api";
+import { cookies } from "next/headers";
+import { isAxiosError } from "axios";
+import { logErrorResponse } from "../../_utils/utils";
 
-const BASE_URL = "https://notehub-api.goit.study";
-
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const backendResponse = await axios.post(
-      `${BASE_URL}/auth/logout`,
-      {},
+    const cookieStore = await cookies();
+
+    const accessToken = cookieStore.get("accessToken")?.value;
+    const refreshToken = cookieStore.get("refreshToken")?.value;
+
+    await api.post(
+      "auth/logout",
+      null,
       {
-        withCredentials: true,
         headers: {
-          Cookie: request.headers.get("cookie") ?? "",
+          Cookie: `accessToken=${accessToken}; refreshToken=${refreshToken}`,
         },
-        validateStatus: () => true,
       },
     );
 
-    const res = NextResponse.json(backendResponse.data ?? null, {
-      status: backendResponse.status,
-    });
+    cookieStore.delete("accessToken");
+    cookieStore.delete("refreshToken");
 
-    const setCookie = backendResponse.headers["set-cookie"];
-    if (Array.isArray(setCookie)) {
-      setCookie.forEach((cookie) => res.headers.append("set-cookie", cookie));
-    } else if (typeof setCookie === "string") {
-      res.headers.set("set-cookie", setCookie);
-    }
-
-    return res;
-  } catch {
     return NextResponse.json(
-      { message: "Logout failed" },
+      { message: "Logged out successfully" },
+      { status: 200 },
+    );
+  } catch (error) {
+    if (isAxiosError(error)) {
+      logErrorResponse(error.response?.data);
+      return NextResponse.json(
+        { error: error.message, response: error.response?.data },
+        { status: error.status },
+      );
+    }
+    logErrorResponse({ message: (error as Error).message });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
       { status: 500 },
     );
   }

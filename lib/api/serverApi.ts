@@ -2,6 +2,7 @@ import type { Note } from "@/types/note";
 import type { FetchNotesResponse } from "@/types/api";
 import type { User } from "@/types/user";
 import { api } from "./api";
+import type { AxiosResponse } from "axios";
 
 type AuthPayload = {
   email: string;
@@ -46,11 +47,11 @@ export async function getMe(
 
 export async function checkSession(
   cookiesHeader: string | undefined,
-): Promise<User | null> {
-  const { data } = await api.get<User | null>(
+): Promise<AxiosResponse<User | null>> {
+  const res = await api.get<User | null>(
     "/auth/session",
     withCookies(cookiesHeader),
   );
-  return data;
+  return res;
 }
 
