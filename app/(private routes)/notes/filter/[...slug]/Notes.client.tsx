@@ -52,14 +52,18 @@ export default function NotesClient({ initialTag }: Props) {
         <p style={{ color: "red" }}>
           Error: {error instanceof Error ? error.message : "Failed to load notes"}
         </p>
+      ) : data && data.items.length > 0 ? (
+        <>
+          <NoteList notes={data.items} />
+          <Pagination
+            pageCount={data.totalPages}
+            currentPage={page}
+            onPageChange={setPage}
+          />
+        </>
       ) : (
-        <NoteList notes={data?.items || []} />
+        <p>No notes found.</p>
       )}
-      <Pagination
-        pageCount={data?.totalPages || 0}
-        currentPage={page}
-        onPageChange={setPage}
-      />
     </div>
   );
 }
